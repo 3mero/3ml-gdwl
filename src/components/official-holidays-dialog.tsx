@@ -344,12 +344,12 @@ export function OfficialHolidaysDialog({
     }
   };
   
-  const handleSourceSelect = (source: CalendarSource) => {
+  const handleSourceSelect = useCallback((source: CalendarSource) => {
+      setViewState('holiday_list'); // Update view state immediately
       setActiveSource(source);
       setLastHolidaySource(source);
-      setViewState('holiday_list');
       fetchHolidays(source, selectedCountry);
-  };
+  }, [selectedCountry, setLastHolidaySource, fetchHolidays]);
   
   const handleHideHoliday = (holidayKey: string) => {
     addHiddenHoliday(holidayKey);
@@ -620,8 +620,8 @@ export function OfficialHolidaysDialog({
           <Card 
               className="w-full text-right hover:border-primary cursor-pointer transition-colors"
               onClick={() => {
+                handleSourceSelect('custom');
                 setIsEditUrlOpen(true);
-                setActiveSource('custom');
               }}
             >
               <CardHeader>
@@ -742,5 +742,6 @@ type ViewState = 'source_select' | 'holiday_list';
     
 
     
+
 
 
