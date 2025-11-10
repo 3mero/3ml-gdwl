@@ -53,10 +53,11 @@ export const defaultViewSettings: ViewSettings = {
       header: 'hsl(220 14% 10%)',
       controls: 'hsl(220 14% 10%)',
       container: 'hsl(220 14% 12%)',
-      dayNumber: '#000000',
       monthName: 'hsl(var(--primary))',
+      monthNumber: 'hsl(var(--muted-foreground))',
+      monthHeaderBackground: 'hsl(var(--accent) / 0.5)',
       workDay: '#10B981',
-      holidayDay: '#FFFFFF',
+      holidayDay: 'transparent',
     },
     tickerSpeed: 8,
     showTicker: true,
@@ -70,26 +71,38 @@ export const defaultViewSettings: ViewSettings = {
     hasSeenRotationTip: false,
 }
 
+const mergeDeep = (target: any, source: any) => {
+  const output = { ...target };
+  if (isObject(target) && isObject(source)) {
+    Object.keys(source).forEach(key => {
+      if (isObject(source[key])) {
+        if (!(key in target)) {
+          Object.assign(output, { [key]: source[key] });
+        } else {
+          output[key] = mergeDeep(target[key], source[key]);
+        }
+      } else {
+        Object.assign(output, { [key]: source[key] });
+      }
+    });
+  }
+  return output;
+};
+
+const isObject = (item: any) => {
+  return (item && typeof item === 'object' && !Array.isArray(item));
+};
+
+
 export function ViewSettingsProvider({ children }: { children: ReactNode }) {
   const [viewSettings, setViewSettings] = useLocalStorage<ViewSettings>('viewSettings', defaultViewSettings);
 
-  const getMergedSettings = useCallback((settings: ViewSettings): ViewSettings => {
-    return {
-      ...defaultViewSettings,
-      ...settings,
-      backgroundColors: {
-        ...defaultViewSettings.backgroundColors,
-        ...(settings.backgroundColors || {}),
-      },
-      colorPresets: settings.colorPresets || [],
-      customHolidayCalendars: settings.customHolidayCalendars || {},
-      lastHolidaySource: settings.lastHolidaySource || null,
-      lastHolidayCountry: settings.lastHolidayCountry || null,
-      customHolidayNames: settings.customHolidayNames || {},
-      hiddenHolidays: settings.hiddenHolidays || [],
-      holidayTranslations: settings.holidayTranslations || {},
-      hasSeenRotationTip: settings.hasSeenRotationTip || false,
-    };
+  // This function ensures that any new default settings are added to existing user settings
+  // without overwriting the user's customizations.
+  const getMergedSettings = useCallback((userSettings: ViewSettings): ViewSettings => {
+    // Start with the defaults, then layer the user's saved settings on top.
+    // mergeDeep ensures nested objects like `backgroundColors` are also merged correctly.
+    return mergeDeep(defaultViewSettings, userSettings);
   }, []);
 
   const currentSettings = getMergedSettings(viewSettings);
@@ -256,5 +269,3 @@ export function useViewSettings() {
   }
   return context;
 }
-
-    
