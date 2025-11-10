@@ -126,6 +126,10 @@ export function SchedulesProvider({ children }: { children: ReactNode }) {
         if ((newS as any).colors) {
           delete (newS as any).colors;
         }
+        // Ensure monthBackgrounds is an object
+        if (!newS.monthBackgrounds) {
+          newS.monthBackgrounds = {};
+        }
         return newS;
       });
       setSchedules(cleanedSchedules);
@@ -238,5 +242,3 @@ export function useSchedules() {
   }
   return context;
 }
-
-    
