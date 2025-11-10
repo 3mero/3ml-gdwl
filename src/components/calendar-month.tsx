@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -12,13 +11,10 @@ import { Schedule } from '@/lib/types';
 import { Button } from './ui/button';
 import { Paintbrush } from 'lucide-react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
@@ -39,11 +35,17 @@ export function CalendarMonth({ month, currentDate, activeSchedule, monthKey, is
   const { updateSchedule } = useSchedules();
   const { backgroundColors } = useViewSettings();
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
-  const [backgroundColor, setBackgroundColor] = useState(activeSchedule.monthBackgrounds?.[monthKey] || '');
   
+  const savedBackgroundColor = activeSchedule.monthBackgrounds?.[monthKey] || '';
+  const [tempBackgroundColor, setTempBackgroundColor] = useState(savedBackgroundColor);
+  const [applyToAll, setApplyToAll] = useState(false);
+
   useEffect(() => {
-    setBackgroundColor(activeSchedule.monthBackgrounds?.[monthKey] || '');
-  }, [activeSchedule.monthBackgrounds, monthKey]);
+    // When the popover opens, or if the saved color changes from elsewhere,
+    // reset the temporary color to match the currently saved one.
+    setTempBackgroundColor(savedBackgroundColor);
+  }, [savedBackgroundColor, isColorPickerOpen]);
+
 
   const scheduleStartDate = activeSchedule.startDate ? new Date(activeSchedule.startDate) : null;
   const year = getYear(month);
@@ -72,43 +74,34 @@ export function CalendarMonth({ month, currentDate, activeSchedule, monthKey, is
   const isCurrentMonth = isSameMonth(month, currentDate) && isSameYear(month, currentDate);
   const isPastMonth = isBefore(monthEnd, currentDate) && !isSameMonth(monthEnd, currentDate);
 
-  const handleColorSave = () => {
+  const handleSaveColor = () => {
     const newBackgrounds = { ...(activeSchedule.monthBackgrounds || {}) };
 
     if (applyToAll) {
-      // Create a list of all month keys for the visible year
       const visibleYear = getYear(month);
       const yearMonths = Array.from({ length: 12 }, (_, i) => format(new Date(visibleYear, i, 1), 'yyyy-MM'));
       yearMonths.forEach(key => {
-        newBackgrounds[key] = backgroundColor;
+        newBackgrounds[key] = tempBackgroundColor;
       });
     } else {
-      newBackgrounds[monthKey] = backgroundColor;
-    }
-    
-    if (!backgroundColor) {
+      if (!tempBackgroundColor) {
         delete newBackgrounds[monthKey];
-        if (applyToAll) {
-           const visibleYear = getYear(month);
-           const yearMonths = Array.from({ length: 12 }, (_, i) => format(new Date(visibleYear, i, 1), 'yyyy-MM'));
-           yearMonths.forEach(key => {
-            delete newBackgrounds[key];
-           });
-        }
+      } else {
+        newBackgrounds[monthKey] = tempBackgroundColor;
+      }
     }
-
     updateSchedule(activeSchedule.id, { monthBackgrounds: newBackgrounds });
     setIsColorPickerOpen(false);
   };
   
   const cardStyle = {
-    backgroundColor: backgroundColor || 'hsl(var(--card))',
+    backgroundColor: isColorPickerOpen ? tempBackgroundColor : savedBackgroundColor,
   };
 
-  const [applyToAll, setApplyToAll] = useState(false);
 
   const handleResetColor = () => {
-    setBackgroundColor(''); 
+    // Clear temp color for immediate visual feedback
+    setTempBackgroundColor(''); 
     
     const newBackgrounds = { ...(activeSchedule.monthBackgrounds || {}) };
     if (applyToAll) {
@@ -137,17 +130,45 @@ export function CalendarMonth({ month, currentDate, activeSchedule, monthKey, is
         )}>
         <CardHeader className="relative pb-2">
           {isPastMonth && <div className="absolute top-0 left-0 right-0 text-center text-xs text-muted-foreground bg-accent/30 rounded-t-md py-0.5">شهر منقضٍ</div>}
-          <div className={cn("absolute top-2 left-3 text-xs font-mono", isPastMonth && "top-6")} style={{color: backgroundColors.monthName}}>{monthIndex + 1}</div>
-           <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn("absolute top-1 right-1 h-7 w-7 text-muted-foreground hover:text-foreground", isPastMonth && "top-5")}
-                onClick={() => setIsColorPickerOpen(true)}
-                aria-label="Change month background"
-            >
-                <Paintbrush className="h-4 w-4" />
-            </Button>
-            <div className={cn("flex justify-center items-center h-8 rounded-md border bg-accent/50 p-1 text-center font-semibold", isPastMonth && "mt-4")} style={{color: backgroundColors.monthName}}>
+          <div className={cn("absolute top-2 left-3 text-xs font-mono", isPastMonth && "top-6")} style={{color: backgroundColors.monthNumber}}>{monthIndex + 1}</div>
+           <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
+              <PopoverTrigger asChild>
+                 <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn("absolute top-1 right-1 h-7 w-7 text-muted-foreground hover:text-foreground", isPastMonth && "top-5")}
+                    aria-label="Change month background"
+                  >
+                    <Paintbrush className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-4" dir="rtl">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-4">
+                      <Label htmlFor="bg-color" className="text-right">
+                          اللون
+                      </Label>
+                      <Input
+                          id="bg-color"
+                          type="color"
+                          value={tempBackgroundColor}
+                          onChange={(e) => setTempBackgroundColor(e.target.value)}
+                          className="p-1 h-10 w-full"
+                      />
+                  </div>
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                      <Checkbox id="apply-to-all" checked={applyToAll} onCheckedChange={(checked) => setApplyToAll(!!checked)} />
+                      <Label htmlFor="apply-to-all">تطبيق على كل أشهر السنة</Label>
+                  </div>
+                  <div className="flex justify-between items-center gap-2 mt-2">
+                     <Button variant="ghost" size="sm" onClick={handleResetColor}>إعادة تعيين</Button>
+                     <Button size="sm" onClick={handleSaveColor}>حفظ</Button>
+                  </div>
+                </div>
+              </PopoverContent>
+           </Popover>
+
+            <div className={cn("flex justify-center items-center h-8 rounded-md border p-1 text-center font-semibold", isPastMonth && "mt-4")} style={{color: backgroundColors.monthName, backgroundColor: backgroundColors.monthHeaderBackground}}>
                 <span>{MONTH_NAMES[monthIndex]} </span>
                 <span className={cn("ml-2", getYear(month) > getYear(new Date()) && "text-destructive")}>{year}</span>
             </div>
@@ -185,41 +206,6 @@ export function CalendarMonth({ month, currentDate, activeSchedule, monthKey, is
           </CardFooter>
         )}
       </Card>
-      
-      <Dialog open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
-        <DialogContent className="sm:max-w-[300px]" dir="rtl">
-            <DialogHeader>
-                <DialogTitle>تغيير لون الخلفية</DialogTitle>
-                <DialogDescription>
-                    اختر لونًا جديدًا لخلفية شهر {MONTH_NAMES[monthIndex]}.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col gap-4 py-4">
-                <div className="flex items-center gap-4">
-                    <Label htmlFor="bg-color" className="text-right">
-                        اللون
-                    </Label>
-                    <Input
-                        id="bg-color"
-                        type="color"
-                        value={backgroundColor}
-                        onChange={(e) => setBackgroundColor(e.target.value)}
-                        className="p-1 h-10 w-full"
-                    />
-                </div>
-                 <div className="flex items-center space-x-2 space-x-reverse">
-                    <Checkbox id="apply-to-all" checked={applyToAll} onCheckedChange={(checked) => setApplyToAll(!!checked)} />
-                    <Label htmlFor="apply-to-all">تطبيق على كل الأشهر</Label>
-                </div>
-            </div>
-            <DialogFooter>
-                <Button variant="ghost" onClick={handleResetColor}>إعادة تعيين</Button>
-                <Button onClick={handleColorSave}>حفظ</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
     </>
   );
 }
-
-    
