@@ -38,7 +38,6 @@
     --header-background: hsl(var(--background));
     --controls-background: hsl(var(--background));
     --container-background: hsl(var(--card));
-    --day-number-color: hsl(var(--foreground));
   }
 }
 
