@@ -40,7 +40,6 @@ export function DayCell({ day, currentDate, isHighlighted }: DayCellProps) {
 
   const dateKey = formatDateKey(day);
   const dayData = activeSchedule?.days[dateKey];
-  const dayOfWeek = getDay(day);
   
   const handleSetType = (type: DayType) => {
     updateDay(dateKey, { type: type });
@@ -59,7 +58,6 @@ export function DayCell({ day, currentDate, isHighlighted }: DayCellProps) {
     updateDay(dateKey, { note: undefined, pinned: false });
   };
 
-  const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; // Friday or Saturday
   const isCurrentDay = isSameDay(day, currentDate);
 
   const getBackgroundColor = () => {
@@ -74,14 +72,9 @@ export function DayCell({ day, currentDate, isHighlighted }: DayCellProps) {
 
   const getDayNumberColor = () => {
     if (dayData?.type === 'work' || dayData?.type === 'holiday') {
-        // Use a high-contrast color for readability on colored backgrounds
         return 'hsl(var(--primary-foreground))';
     }
-    if (isWeekend && (!dayData || dayData.type === 'default')) {
-        return 'rgb(52 211 153)'; // Tailwind's green-400
-    }
-    // Fallback to the user-defined or default day number color
-    return backgroundColors.dayNumber;
+    return '#000000'; // Default to black
   }
   
   const handleTouchStart = () => {
