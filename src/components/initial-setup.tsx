@@ -75,8 +75,8 @@ export function InitialSetup({ isDialog = false, onFinished, existingSchedule = 
         setWorkDays(1);
         setHolidayDays(3);
         // setMonthsToShow is already 12
-        setWorkColor('#10B981');
-        setHolidayColor('#FFFFFF');
+        setWorkColor(backgroundColors.workDay);
+        setHolidayColor(backgroundColors.holidayDay);
     }
   }, [existingSchedule, backgroundColors]);
 
@@ -123,7 +123,6 @@ export function InitialSetup({ isDialog = false, onFinished, existingSchedule = 
         ...prev,
         workDay: workColor,
         holidayDay: holidayColor,
-        dayNumber: '#000000',
     }));
     
     const startDayOfWeekValue: 0 | 1 | 6 = 0; // Default to Sunday
