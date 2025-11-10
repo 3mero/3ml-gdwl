@@ -15,7 +15,7 @@ export interface Schedule {
   days: { [date: string]: DayData }; // "YYYY-MM-DD" -> DayData
   monthsToShow: number;
   startDate?: string; // YYYY-MM-DD
-  monthBackgrounds?: { [monthKey: string]: string }; // "YYYY-MM" -> color
+  monthBackgrounds: { [monthKey: string]: string }; // "YYYY-MM" -> color
 }
 
 export interface BackgroundColors {
@@ -23,8 +23,9 @@ export interface BackgroundColors {
     header: string;
     controls: string;
     container: string;
-    dayNumber: string;
     monthName: string;
+    monthNumber: string;
+    monthHeaderBackground: string;
     workDay: string;
     holidayDay: string;
 }
@@ -70,5 +71,3 @@ export interface HolidayEvent {
   originalSummary: string;
   description: string;
 }
-
-    
