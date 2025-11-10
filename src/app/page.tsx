@@ -351,7 +351,7 @@ export default function Home() {
     let originalClasses: string | null = null;
     if (isMobile) {
       originalClasses = calendarContainer.className;
-      calendarContainer.className = 'grid grid-cols-3 gap-4 transition-transform duration-300 origin-top sm:gap-6 p-2 sm:p-4';
+      calendarContainer.className = 'grid grid-cols-2 gap-4 transition-transform duration-300 origin-top sm:gap-6 p-2 sm:p-4';
     }
     
     try {
