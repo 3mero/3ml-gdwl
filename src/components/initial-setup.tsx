@@ -51,8 +51,8 @@ export function InitialSetup({ isDialog = false, onFinished, existingSchedule = 
   const [holidayDays, setHolidayDays] = React.useState(3);
   const [monthsToShow] = React.useState(12);
   
-  const [workColor, setWorkColor] = React.useState(defaultViewSettings.backgroundColors.workDay);
-  const [holidayColor, setHolidayColor] = React.useState(defaultViewSettings.backgroundColors.holidayDay);
+  const [workColor, setWorkColor] = React.useState('#10B981');
+  const [holidayColor, setHolidayColor] = React.useState('#FFFFFF');
   
   React.useEffect(() => {
     if (existingSchedule) {
@@ -75,8 +75,8 @@ export function InitialSetup({ isDialog = false, onFinished, existingSchedule = 
         setWorkDays(1);
         setHolidayDays(3);
         // setMonthsToShow is already 12
-        setWorkColor(backgroundColors.workDay);
-        setHolidayColor(backgroundColors.holidayDay);
+        setWorkColor('#10B981');
+        setHolidayColor('#FFFFFF');
     }
   }, [existingSchedule, backgroundColors]);
 
