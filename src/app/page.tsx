@@ -284,7 +284,6 @@ export default function Home() {
     document.documentElement.style.setProperty('--header-background', backgroundColors.header);
     document.documentElement.style.setProperty('--controls-background', backgroundColors.controls);
     document.documentElement.style.setProperty('--container-background', backgroundColors.container);
-    document.documentElement.style.setProperty('--day-number-color', backgroundColors.dayNumber);
   }, [backgroundColors]);
 
   React.useEffect(() => {
