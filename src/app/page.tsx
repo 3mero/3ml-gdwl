@@ -37,111 +37,150 @@ const generateTickerItems = (schedule: Schedule | null, today: Date): TickerItem
 
     const items: TickerItemData[] = [];
     const todayStart = startOfToday();
+    const todayKey = format(todayStart, 'yyyy-MM-dd');
     
     const sortedDays = Object.keys(schedule.days).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
     
-    // Find next work day and calculate days remaining
-    let nextWorkDay: Date | null = null;
-    const futureWorkDays = sortedDays.filter(dayKey => {
-      const dayDate = parseISO(dayKey);
-      return (isSameDay(dayDate, todayStart) || isAfter(dayDate, todayStart)) && schedule.days[dayKey]?.type === 'work';
-    });
+    const isTodayWorkDay = schedule.days[todayKey]?.type === 'work';
 
-    if (futureWorkDays.length > 0) {
-        nextWorkDay = parseISO(futureWorkDays[0]);
-    }
+    // Find next holiday streak
+    const findNextHolidayStreak = (startDate: Date): Date[] => {
+        const futureDaysOnly = sortedDays.filter(dayKey => isAfter(parseISO(dayKey), startDate) || isSameDay(parseISO(dayKey), startDate));
+        let streak: Date[] = [];
+        let firstHolidayIndex = -1;
 
-    if (nextWorkDay) {
-        const daysRemaining = differenceInDays(nextWorkDay, todayStart);
+        for (let i = 0; i < futureDaysOnly.length; i++) {
+            if (schedule.days[futureDaysOnly[i]]?.type === 'holiday') {
+                firstHolidayIndex = i;
+                break;
+            }
+        }
+
+        if (firstHolidayIndex !== -1) {
+            const firstHolidayDate = parseISO(futureDaysOnly[firstHolidayIndex]);
+            streak.push(firstHolidayDate);
+
+            for (let i = firstHolidayIndex + 1; i < futureDaysOnly.length; i++) {
+                const currentKey = futureDaysOnly[i];
+                const currentDate = parseISO(currentKey);
+                const prevDate = streak[streak.length - 1];
+
+                if (differenceInDays(currentDate, prevDate) === 1 && schedule.days[currentKey]?.type === 'holiday') {
+                    streak.push(currentDate);
+                } else {
+                    break; 
+                }
+            }
+        }
+        return streak;
+    };
+    
+    if (isTodayWorkDay) {
+        const nextHolidayStreak = findNextHolidayStreak(todayStart);
+        let holidayInfo = '';
+        if (nextHolidayStreak.length > 0) {
+            const isHolidayTomorrow = isTomorrow(nextHolidayStreak[0]);
+            if(isHolidayTomorrow) {
+                holidayInfo = ` | وإجازتك تبدأ غدًا (${nextHolidayStreak.length} أيام)`;
+            } else {
+                 holidayInfo = ` | إجازتك القادمة ${nextHolidayStreak.length} أيام`;
+            }
+        }
+
+        const todayName = format(today, 'eeee', { locale: arSA });
+
         items.push({
-            id: `work-${format(nextWorkDay, 'yyyy-MM-dd')}`,
-            date: nextWorkDay.toISOString(),
+            id: `work-${todayKey}`,
+            date: today.toISOString(),
             type: 'work',
-            relatedDays: [format(nextWorkDay, 'yyyy-MM-dd')],
+            relatedDays: [todayKey],
             node: (
                 <div className="flex items-center gap-2" dir="rtl">
                     <span className="bg-accent/50 text-foreground font-semibold px-2 py-1 rounded-md flex items-center gap-1">
                         <Briefcase className="h-4 w-4 text-green-400" />
-                        <span>عملك التالي</span>
+                        <span>عملك التالي:</span>
                     </span>
-                    <span>
-                        يوم {format(nextWorkDay, 'eeee, d MMMM yyyy', { locale: arSA })} (يتبقى {daysRemaining} أيام)
-                    </span>
+                    <span className="font-bold text-primary">اليوم {todayName}{holidayInfo}</span>
                 </div>
             )
         });
-    }
-    
-    // Find next consecutive holidays, starting from today or in the future
-    let nextHolidayStreak: Date[] = [];
-    const futureDays = sortedDays.filter(dayKey => isSameDay(parseISO(dayKey), todayStart) || isAfter(parseISO(dayKey), todayStart));
-    
-    let firstHolidayIndex = -1;
-    for (let i = 0; i < futureDays.length; i++) {
-        if (schedule.days[futureDays[i]]?.type === 'holiday') {
-            firstHolidayIndex = i;
-            break;
+    } else {
+        // Find next work day if today is not a work day
+        const futureWorkDays = sortedDays.filter(dayKey => {
+            const dayDate = parseISO(dayKey);
+            return (isAfter(dayDate, todayStart)) && schedule.days[dayKey]?.type === 'work';
+        });
+
+        if (futureWorkDays.length > 0) {
+            const nextWorkDay = parseISO(futureWorkDays[0]);
+            const daysRemaining = differenceInDays(nextWorkDay, todayStart);
+            items.push({
+                id: `work-${format(nextWorkDay, 'yyyy-MM-dd')}`,
+                date: nextWorkDay.toISOString(),
+                type: 'work',
+                relatedDays: [format(nextWorkDay, 'yyyy-MM-dd')],
+                node: (
+                    <div className="flex items-center gap-2" dir="rtl">
+                        <span className="bg-accent/50 text-foreground font-semibold px-2 py-1 rounded-md flex items-center gap-1">
+                            <Briefcase className="h-4 w-4 text-green-400" />
+                            <span>عملك التالي</span>
+                        </span>
+                        <span>
+                            يوم {format(nextWorkDay, 'eeee, d MMMM yyyy', { locale: arSA })} (يتبقى {daysRemaining} أيام)
+                        </span>
+                    </div>
+                )
+            });
         }
     }
+    
+    // Find next consecutive holidays (only if today is NOT a workday, as it's handled above)
+    if (!isTodayWorkDay) {
+        const nextHolidayStreak = findNextHolidayStreak(todayStart);
 
-    if (firstHolidayIndex !== -1) {
-        const firstHolidayDate = parseISO(futureDays[firstHolidayIndex]);
-        nextHolidayStreak.push(firstHolidayDate);
+        if (nextHolidayStreak.length > 0) {
+            const streakStartDate = nextHolidayStreak[0];
+            const streakEndDate = nextHolidayStreak[nextHolidayStreak.length - 1];
+            
+            // Filter streak to only count days from today onwards
+            const remainingDaysInStreak = nextHolidayStreak.filter(d => isSameDay(d, todayStart) || isAfter(d, todayStart)).length;
 
-        for (let i = firstHolidayIndex + 1; i < futureDays.length; i++) {
-            const currentKey = futureDays[i];
-            const currentDate = parseISO(currentKey);
-            const prevDate = nextHolidayStreak[nextHolidayStreak.length - 1];
-
-            if (differenceInDays(currentDate, prevDate) === 1 && schedule.days[currentKey]?.type === 'holiday') {
-                nextHolidayStreak.push(currentDate);
+            let holidayText;
+            if (nextHolidayStreak.length > 6) {
+                const startFormatted = format(streakStartDate, 'd MMMM', { locale: arSA });
+                const endFormatted = format(streakEndDate, 'd MMMM', { locale: arSA });
+                holidayText = `من ${startFormatted} إلى ${endFormatted}`;
             } else {
-                break; // Streak broken
+                 const dayFormatter = (date: Date) => {
+                    if (isToday(date)) return `اليوم (${format(date, 'eeee', { locale: arSA })})`;
+                    if (isTomorrow(date)) return `غداً (${format(date, 'eeee', { locale: arSA })})`;
+                    const diff = differenceInDays(date, todayStart);
+                    if (diff === 2) return `بعد غد (${format(date, 'eeee', { locale: arSA })})`;
+                    return format(date, 'eeee, d MMMM', { locale: arSA });
+                };
+                holidayText = nextHolidayStreak.map(dayFormatter).join('، ');
             }
+            
+            const remainingText = `(يتبقى ${remainingDaysInStreak} ${remainingDaysInStreak > 2 ? 'أيام' : 'يوم'})`;
+
+            items.push({
+                id: `holiday-${format(streakStartDate, 'yyyy-MM-dd')}`,
+                date: streakStartDate.toISOString(),
+                type: 'holiday',
+                relatedDays: nextHolidayStreak.map(d => format(d, 'yyyy-MM-dd')),
+                node: (
+                    <div className="flex items-center gap-2" dir="rtl">
+                        <span className="bg-accent/50 text-foreground font-semibold px-2 py-1 rounded-md flex items-center gap-1">
+                            <Coffee className="h-4 w-4 text-orange-400" />
+                            <span>إجازتك التالية</span>
+                        </span>
+                        <span>{holidayText} {remainingText}</span>
+                    </div>
+                )
+            });
         }
     }
 
-
-    if (nextHolidayStreak.length > 0) {
-        const streakStartDate = nextHolidayStreak[0];
-        const streakEndDate = nextHolidayStreak[nextHolidayStreak.length - 1];
-        const remainingDaysInStreak = nextHolidayStreak.filter(d => isSameDay(d, todayStart) || isAfter(d, todayStart)).length;
-
-        let holidayText;
-
-        if (nextHolidayStreak.length > 6) {
-            const startFormatted = format(streakStartDate, 'd MMMM', { locale: arSA });
-            const endFormatted = format(streakEndDate, 'd MMMM', { locale: arSA });
-            holidayText = `من ${startFormatted} إلى ${endFormatted}`;
-        } else {
-            const dayFormatter = (date: Date) => {
-                if (isToday(date)) return `اليوم (${format(date, 'eeee', { locale: arSA })})`;
-                if (isTomorrow(date)) return `غداً (${format(date, 'eeee', { locale: arSA })})`;
-                const diff = differenceInDays(date, todayStart);
-                if (diff === 2) return `بعد غد (${format(date, 'eeee', { locale: arSA })})`;
-                return format(date, 'eeee, d MMMM', { locale: arSA });
-            };
-            holidayText = nextHolidayStreak.map(dayFormatter).join('، ');
-        }
-        
-        const remainingText = `(يتبقى ${remainingDaysInStreak} ${remainingDaysInStreak > 2 ? 'أيام' : 'يوم'})`;
-
-        items.push({
-            id: `holiday-${format(streakStartDate, 'yyyy-MM-dd')}`,
-            date: streakStartDate.toISOString(),
-            type: 'holiday',
-            relatedDays: nextHolidayStreak.map(d => format(d, 'yyyy-MM-dd')),
-            node: (
-                <div className="flex items-center gap-2" dir="rtl">
-                    <span className="bg-accent/50 text-foreground font-semibold px-2 py-1 rounded-md flex items-center gap-1">
-                        <Coffee className="h-4 w-4 text-orange-400" />
-                        <span>إجازتك التالية</span>
-                    </span>
-                    <span>{holidayText} {remainingText}</span>
-                </div>
-            )
-        });
-    }
 
     const allDaysWithData = sortedDays
         .map(key => ({ key, data: schedule.days[key], date: parseISO(key) }));
@@ -796,3 +835,5 @@ export default function Home() {
 }
 
     
+
+
