@@ -57,7 +57,7 @@ const GOOGLE_CALENDARS: Record<string, { name: string; url: string | null }> = {
     qa: { name: 'قطر', url: 'https://calendar.google.com/calendar/ical/en.qa%23holiday%40group.v.calendar.google.com/public/basic.ics' },
     bh: { name: 'البحرين', url: 'https://calendar.google.com/calendar/ical/en.bh%23holiday%40group.v.calendar.google.com/public/basic.ics' },
     eg: { name: 'مصر', url: 'https://calendar.google.com/calendar/ical/en.eg%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-    jo: { name: 'الأردن', url: 'https://calendar.google.com/calendar/ical/en.jo%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+    jo: { name: 'الأردن', url: 'https://calendar.google.com/calendar/ical/en.jo%23holiday%4@group.v.calendar.google.com/public/basic.ics' },
     lb: { name: 'لبنان', url: 'https://calendar.google.com/calendar/ical/en.lb%23holiday%40group.v.calendar.google.com/public/basic.ics' },
     sy: { name: 'سوريا', url: 'https://calendar.google.com/calendar/ical/en.sy%23holiday%40group.v.calendar.google.com/public/basic.ics' },
     iq: { name: 'العراق', url: 'https://calendar.google.com/calendar/ical/en.iq%23holiday%40group.v.calendar.google.com/public/basic.ics' },
@@ -742,6 +742,7 @@ type ViewState = 'source_select' | 'holiday_list';
     
 
     
+
 
 
 
