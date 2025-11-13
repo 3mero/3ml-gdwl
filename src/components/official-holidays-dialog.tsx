@@ -217,10 +217,9 @@ export function OfficialHolidaysDialog({
     hiddenHolidays, addHiddenHoliday, removeHiddenHoliday,
   } = useViewSettings();
   
-  const [viewState, setViewState] = useState<ViewState>('source_select');
   const [isEditUrlOpen, setIsEditUrlOpen] = useState(false);
   
-  const [activeSource, setActiveSource] = useState<CalendarSource | null>(lastHolidaySource);
+  const [activeSource, setActiveSource] = useState<CalendarSource>('officeholidays');
   const [selectedCountry, setSelectedCountry] = useState(lastHolidayCountry || 'om');
 
   const [selectedHolidays, setSelectedHolidays] = useState<Set<string>>(new Set());
@@ -320,34 +319,35 @@ export function OfficialHolidaysDialog({
 
   useEffect(() => {
     if (isOpen) {
-      if (lastHolidaySource && lastHolidayCountry) {
-        setActiveSource(lastHolidaySource);
-        setSelectedCountry(lastHolidayCountry);
-        setViewState('holiday_list');
-        fetchHolidays(lastHolidaySource, lastHolidayCountry);
-      } else {
-        setViewState('source_select');
-        setActiveSource(null);
-      }
+      const sourceToLoad = lastHolidaySource || 'officeholidays';
+      const countryToLoad = lastHolidayCountry || 'om';
+
+      setActiveSource(sourceToLoad);
+      setSelectedCountry(countryToLoad);
+      
+      fetchHolidays(sourceToLoad, countryToLoad);
     } else {
+      // Reset state when dialog closes
       setHolidays([]);
       setError(null);
       setFilter('all');
     }
-  }, [isOpen, lastHolidayCountry, lastHolidaySource, fetchHolidays]);
+  }, [isOpen, fetchHolidays]);
+
 
   const handleCountryChange = (countryCode: string) => {
     setSelectedCountry(countryCode);
     setLastHolidayCountry(countryCode);
-    if (activeSource) {
-      fetchHolidays(activeSource, countryCode);
-    }
+    fetchHolidays(activeSource, countryCode);
   };
   
-  const handleSourceSelect = (source: CalendarSource) => {
+  const handleSourceChange = (source: CalendarSource) => {
+      if (source === 'custom') {
+          setIsEditUrlOpen(true);
+          return;
+      }
       setActiveSource(source);
       setLastHolidaySource(source);
-      setViewState('holiday_list');
       fetchHolidays(source, selectedCountry);
   };
   
@@ -454,27 +454,23 @@ export function OfficialHolidaysDialog({
                     <CalendarX2 className="h-6 w-6 mx-auto mb-2" />
                     <AlertDescription>{error}</AlertDescription>
                 </Alert>
-                {activeSource && (
-                     <Button variant="link" className="mt-2" onClick={() => setIsEditUrlOpen(true)}>
-                        <Pencil className="ml-2 h-4 w-4"/>
-                        هل الرابط صحيح؟ اضغط هنا لتعديله
-                    </Button>
-                )}
+                 <Button variant="link" className="mt-2" onClick={() => setIsEditUrlOpen(true)}>
+                    <Pencil className="ml-2 h-4 w-4"/>
+                    هل الرابط صحيح؟ اضغط هنا لتعديله
+                </Button>
             </div>
         );
     }
     
-    if (!loading && holidays.length === 0 && viewState === 'holiday_list') {
+    if (holidays.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
               <CalendarX2 className="h-8 w-8" />
               <p>لم يتم العثور على إجازات رسمية قادمة.</p>
-                {activeSource && (
-                    <Button variant="link" className="mt-2" onClick={() => setIsEditUrlOpen(true)}>
-                        <Pencil className="ml-2 h-4 w-4"/>
-                        هل الرابط صحيح؟ اضغط هنا لتعديله
-                    </Button>
-                )}
+                <Button variant="link" className="mt-2" onClick={() => setIsEditUrlOpen(true)}>
+                    <Pencil className="ml-2 h-4 w-4"/>
+                    هل الرابط صحيح؟ اضغط هنا لتعديله
+                </Button>
             </div>
         );
     }
@@ -583,57 +579,6 @@ export function OfficialHolidaysDialog({
     );
   };
   
-  const getSourceName = () => {
-      if (activeSource === 'google') return 'تقويم Google';
-      if (activeSource === 'officeholidays') return 'OfficeHolidays.com';
-      if (activeSource === 'custom') return 'رابط مخصص';
-      return 'يرجى الاختيار بالأسفل';
-  }
-
-  const renderSourceSelection = () => (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-4">
-          <p className="text-muted-foreground">يرجى اختيار مصدر التقويم المطلوب.</p>
-          <Card 
-            className="w-full text-right hover:border-primary cursor-pointer transition-colors"
-            onClick={() => handleSourceSelect('google')}
-          >
-              <CardHeader>
-                  <div className="flex items-center justify-between">
-                     <CardTitle>تقويم Google</CardTitle>
-                     <Globe className="h-6 w-6 text-blue-500"/>
-                  </div>
-                  <CardDescription>المصدر الافتراضي والموثوق للإجازات الرسمية لمعظم الدول.</CardDescription>
-              </CardHeader>
-          </Card>
-           <Card 
-              className="w-full text-right hover:border-primary cursor-pointer transition-colors"
-              onClick={() => handleSourceSelect('officeholidays')}
-            >
-              <CardHeader>
-                  <div className="flex items-center justify-between">
-                     <CardTitle>OfficeHolidays.com</CardTitle>
-                      <Building className="h-6 w-6 text-gray-500"/>
-                  </div>
-                  <CardDescription>مصدر عالمي آخر يوفر تقويمات لمختلف الدول.</CardDescription>
-              </CardHeader>
-          </Card>
-          <Card 
-              className="w-full text-right hover:border-primary cursor-pointer transition-colors"
-              onClick={() => {
-                setIsEditUrlOpen(true);
-                setActiveSource('custom');
-              }}
-            >
-              <CardHeader>
-                  <div className="flex items-center justify-between">
-                     <CardTitle>رابط مخصص</CardTitle>
-                      <Link className="h-6 w-6 text-green-500"/>
-                  </div>
-                  <CardDescription>أضف أي تقويم بصيغة ICS من رابط خارجي.</CardDescription>
-              </CardHeader>
-          </Card>
-      </div>
-  );
 
   return (
     <>
@@ -641,56 +586,41 @@ export function OfficialHolidaysDialog({
       <DialogContent className="sm:max-w-md h-[80vh] flex flex-col" dir="rtl">
         <DialogHeader>
           <DialogTitle>الإجازات الرسمية القادمة</DialogTitle>
-           {viewState === 'source_select' ? (
-                <DialogDescription>
-                    اختر المصدر الذي تود جلب بيانات الإجازات منه.
-                </DialogDescription>
-            ) : (
-                <DialogDescription>
-                    اختر الدولة لعرض الإجازات الرسمية وإضافتها إلى جدولك.
-                </DialogDescription>
-            )}
+          <DialogDescription>
+            اختر الدولة والمصدر لعرض الإجازات الرسمية وإضافتها إلى جدولك.
+          </DialogDescription>
         </DialogHeader>
 
-        {viewState === 'holiday_list' && (
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                     <div className="space-y-1">
-                        <Label htmlFor="country-select">اختر الدولة</Label>
-                        <p 
-                            className="text-xs text-muted-foreground text-right px-1 cursor-pointer hover:text-primary"
-                            onClick={() => setViewState('source_select')}
-                        >
-                            المصدر الحالي: <span className="font-semibold text-primary">{getSourceName()}</span> (للتغيير)
-                        </p>
-                    </div>
-                    {activeSource !== 'custom' && (
-                        <div className="flex items-center gap-2">
-                            <Select value={selectedCountry} onValueChange={handleCountryChange}>
-                                <SelectTrigger id="country-select" className="w-[180px]">
-                                    <SelectValue placeholder="اختر دولة..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(COUNTRIES).map(([code, { name }]) => (
-                                        <SelectItem key={code} value={code}>{name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Button variant="outline" size="icon" onClick={() => setIsEditUrlOpen(true)}>
-                                <Link className="h-4 w-4" />
-                                <span className="sr-only">تعديل الرابط</span>
-                            </Button>
-                        </div>
-                    )}
-                </div>
-            </div>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Select value={selectedCountry} onValueChange={handleCountryChange}>
+                <SelectTrigger id="country-select" className="w-full">
+                    <SelectValue placeholder="اختر دولة..." />
+                </SelectTrigger>
+                <SelectContent>
+                    {Object.entries(COUNTRIES).map(([code, { name }]) => (
+                        <SelectItem key={code} value={code}>{name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
 
-        <div className="flex-1 min-h-0">
-          {viewState === 'source_select' ? renderSourceSelection() : renderHolidayList()}
+             <Select value={activeSource} onValueChange={(val) => handleSourceChange(val as CalendarSource)}>
+                <SelectTrigger id="source-select" className="w-full">
+                    <SelectValue placeholder="اختر مصدر..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="officeholidays">OfficeHolidays.com</SelectItem>
+                    <SelectItem value="google">تقويم Google</SelectItem>
+                    <SelectItem value="custom">رابط مخصص</SelectItem>
+                </SelectContent>
+            </Select>
         </div>
 
-        {viewState === 'holiday_list' && !loading && holidays.length > 0 &&(
+
+        <div className="flex-1 min-h-0">
+          {renderHolidayList()}
+        </div>
+
+        {!loading && holidays.length > 0 &&(
             <DialogFooter className="flex-col sm:flex-row sm:justify-between pt-4 border-t">
               <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
               <div className="flex flex-col-reverse sm:flex-row gap-2">
@@ -722,26 +652,23 @@ export function OfficialHolidaysDialog({
       </DialogContent>
     </Dialog>
 
-    {activeSource && <EditUrlDialog
+    <EditUrlDialog
         isOpen={isEditUrlOpen}
         onOpenChange={setIsEditUrlOpen}
         countryCode={selectedCountry}
         source={activeSource}
         onSave={() => { 
-            if(activeSource) {
-              fetchHolidays(activeSource, selectedCountry)
-            }
+            fetchHolidays(activeSource, selectedCountry)
         }}
-    />}
+    />
     </>
   );
 }
 
-type ViewState = 'source_select' | 'holiday_list';
-
     
 
     
+
 
 
 
