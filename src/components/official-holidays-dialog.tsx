@@ -344,12 +344,12 @@ export function OfficialHolidaysDialog({
     }
   };
   
-  const handleSourceSelect = useCallback((source: CalendarSource) => {
-      setViewState('holiday_list'); // Update view state immediately
+  const handleSourceSelect = (source: CalendarSource) => {
       setActiveSource(source);
       setLastHolidaySource(source);
+      setViewState('holiday_list');
       fetchHolidays(source, selectedCountry);
-  }, [selectedCountry, setLastHolidaySource, fetchHolidays]);
+  };
   
   const handleHideHoliday = (holidayKey: string) => {
     addHiddenHoliday(holidayKey);
@@ -591,7 +591,7 @@ export function OfficialHolidaysDialog({
   }
 
   const renderSourceSelection = () => (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-4">
           <p className="text-muted-foreground">يرجى اختيار مصدر التقويم المطلوب.</p>
           <Card 
             className="w-full text-right hover:border-primary cursor-pointer transition-colors"
@@ -620,8 +620,8 @@ export function OfficialHolidaysDialog({
           <Card 
               className="w-full text-right hover:border-primary cursor-pointer transition-colors"
               onClick={() => {
-                handleSourceSelect('custom');
                 setIsEditUrlOpen(true);
+                setActiveSource('custom');
               }}
             >
               <CardHeader>
