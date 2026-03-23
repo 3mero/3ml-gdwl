@@ -57,7 +57,7 @@ const GOOGLE_CALENDARS: Record<string, { name: string; url: string | null }> = {
     qa: { name: 'قطر', url: 'https://calendar.google.com/calendar/ical/en.qa%23holiday%40group.v.calendar.google.com/public/basic.ics' },
     bh: { name: 'البحرين', url: 'https://calendar.google.com/calendar/ical/en.bh%23holiday%40group.v.calendar.google.com/public/basic.ics' },
     eg: { name: 'مصر', url: 'https://calendar.google.com/calendar/ical/en.eg%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-    jo: { name: 'الأردن', url: 'https://calendar.google.com/calendar/ical/en.jo%23holiday%4@group.v.calendar.google.com/public/basic.ics' },
+    jo: { name: 'الأردن', url: 'https://calendar.google.com/calendar/ical/en.jo%23holiday%40group.v.calendar.google.com/public/basic.ics' },
     lb: { name: 'لبنان', url: 'https://calendar.google.com/calendar/ical/en.lb%23holiday%40group.v.calendar.google.com/public/basic.ics' },
     sy: { name: 'سوريا', url: 'https://calendar.google.com/calendar/ical/en.sy%23holiday%40group.v.calendar.google.com/public/basic.ics' },
     iq: { name: 'العراق', url: 'https://calendar.google.com/calendar/ical/en.iq%23holiday%40group.v.calendar.google.com/public/basic.ics' },
@@ -259,12 +259,34 @@ export function OfficialHolidaysDialog({
     }
 
     try {
-      const url = `${CORS_PROXY_URL}${encodeURIComponent(calendarUrl)}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) throw new Error(`فشل جلب البيانات: ${response.statusText}`);
-      
-      const icsData = await response.text();
+      let icsData = null;
+      let lastError = null;
+
+      const proxies = [
+          (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+          (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+      ];
+
+      for (const proxyFn of proxies) {
+          try {
+              const url = proxyFn(calendarUrl);
+              const response = await fetch(url);
+              if (response.ok) {
+                  const text = await response.text();
+                  if (text && text.includes('BEGIN:VCALENDAR')) {
+                      icsData = text;
+                      break; // Success
+                  }
+              }
+          } catch (e) {
+              lastError = e;
+          }
+      }
+
+      if (!icsData) {
+          throw new Error("تعذر الوصول إلى مزود الإجازات (CORS Proxy)، حاول مجدداً لاحقاً.");
+      }
+
       let jcalData;
       try {
         jcalData = ICAL.parse(icsData);
