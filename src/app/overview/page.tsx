@@ -172,32 +172,34 @@ export default function OverviewPage() {
     const [yearPage, setYearPage] = useState(0);
 
     useEffect(() => {
-        if (activeSchedule) {
-            const allEvents = Object.entries(activeSchedule.days)
-                .map(([dateKey, data]) => ({ date: parseISO(dateKey), data, dateKey }))
-                .filter(item => item.data.pinned || (item.data.note && item.data.note.trim() !== ''))
-                .sort((a, b) => b.date.getTime() - a.date.getTime());
+        if (!isLoaded || !activeSchedule) return;
 
-            const grouped = allEvents.reduce((acc, item) => {
-                const year = getYear(item.date).toString();
-                if (!acc[year]) {
-                    acc[year] = [];
-                }
-                acc[year].push(item);
-                return acc;
-            }, {} as Record<string, EventItem[]>);
+        const allEvents = Object.entries(activeSchedule.days)
+            .map(([dateKey, data]) => ({ date: parseISO(dateKey), data, dateKey }))
+            .filter(item => item.data.pinned || (item.data.note && item.data.note.trim() !== ''))
+            .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-            setEventsByYear(grouped);
-
-            const years = Object.keys(grouped).sort((a, b) => parseInt(b) - parseInt(a));
-            if (years.length > 0 && (!selectedYear || !grouped[selectedYear])) {
-                setSelectedYear(years[0]);
-            } else if (years.length === 0) {
-                setSelectedYear(null);
+        const grouped = allEvents.reduce((acc, item) => {
+            const year = getYear(item.date).toString();
+            if (!acc[year]) {
+                acc[year] = [];
             }
-        }
+            acc[year].push(item);
+            return acc;
+        }, {} as Record<string, EventItem[]>);
+
+        setEventsByYear(grouped);
+
+        const years = Object.keys(grouped).sort((a, b) => parseInt(b) - parseInt(a));
+        setSelectedYear(prev => {
+            if (years.length === 0) return null;
+            // Keep selected year if it still has data, otherwise select the most recent year
+            if (prev && grouped[prev]) return prev;
+            return years[0];
+        });
+
         setStorageSize(formatBytes(getLocalStorageSize()));
-    }, [activeSchedule, selectedYear]);
+    }, [activeSchedule, isLoaded]);
 
     const handleEdit = (item: EventItem) => {
         setEditingItem(item);
