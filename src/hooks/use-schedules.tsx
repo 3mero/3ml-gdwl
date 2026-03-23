@@ -178,15 +178,18 @@ export function SchedulesProvider({ children }: { children: ReactNode }) {
     if (!activeScheduleId) return;
     const yearNumber = parseInt(year, 10);
     updateSchedule(activeScheduleId, (prevSchedule) => {
-        const newDays = { ...prevSchedule.days };
-        for (const dateKey in newDays) {
+        const newDays: typeof prevSchedule.days = {};
+        for (const dateKey in prevSchedule.days) {
             if (getYear(new Date(dateKey)) === yearNumber) {
-                delete newDays[dateKey].note;
-                delete newDays[dateKey].pinned;
-                // If day becomes default with no data, remove it
-                if (newDays[dateKey].type === 'default' && !newDays[dateKey].note && !newDays[dateKey].pinned) {
-                    delete newDays[dateKey];
+                // Create a new day object without note/pinned
+                const { note, pinned, ...rest } = prevSchedule.days[dateKey];
+                // Only keep the day if it has a non-default type (work/holiday)
+                if (rest.type !== 'default') {
+                    newDays[dateKey] = rest;
                 }
+                // If type is default, omit the day entirely (clean up)
+            } else {
+                newDays[dateKey] = prevSchedule.days[dateKey];
             }
         }
         return { days: newDays };
@@ -196,13 +199,13 @@ export function SchedulesProvider({ children }: { children: ReactNode }) {
   const deleteAllEvents = useCallback(() => {
     if (!activeScheduleId) return;
     updateSchedule(activeScheduleId, (prevSchedule) => {
-        const newDays = { ...prevSchedule.days };
-        for (const dateKey in newDays) {
-           delete newDays[dateKey].note;
-           delete newDays[dateKey].pinned;
-           if (newDays[dateKey].type === 'default') {
-              delete newDays[dateKey];
-           }
+        const newDays: typeof prevSchedule.days = {};
+        for (const dateKey in prevSchedule.days) {
+            const { note, pinned, ...rest } = prevSchedule.days[dateKey];
+            // Only keep the day if it has a non-default type (work/holiday)
+            if (rest.type !== 'default') {
+                newDays[dateKey] = rest;
+            }
         }
         return { days: newDays };
     });
